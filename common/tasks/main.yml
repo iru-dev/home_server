@@ -1,0 +1,64 @@
+---
+  - name: Check if EPEL is installed
+    command: rpm -qa | grep epel
+    register: epel_check
+
+  - name: Check if Remi is installed
+    command: rpm -qa | grep remi-release
+    register: remi_check
+
+  - name: Install remi repo.
+    yum:
+      name: http://rpms.famillecollet.com/enterprise/remi-release-{{ ansible_distribution_major_version }}.rpm
+      state: present
+    when: "'remi' not in remi_check.stdout"
+
+  - name: Import remi GPG key.
+    rpm_key:
+      key: http://rpms.remirepo.net/RPM-GPG-KEY-remi
+      state: present
+    when: "'remi' not in remi_check.stdout"
+
+  - name: Install epel-release
+    yum:
+      name: epel-release
+      state: latest
+    when: "'epel-release' not in remi_check.stdout"
+
+  - name: Update yum cache
+    yum: update_cache=yes
+    tags: [common]
+
+  - name: "Install common necessary packages"
+    package:
+     name: "{{ common_packages }}"
+     state: "{{ common_packages_state }}"
+     enablerepo: "{{ common_enable_repo }}"
+    tags: [common]
+
+  - name: Set timezone
+    timezone: name={{ common_timezone }}
+    tags: [common,timezone]
+
+  - name: Configure hostname
+    hostname: name={{ common_hostname }}
+    tags: [common,host]
+
+  - name: Configure hosts
+    lineinfile: dest="/etc/hosts" regexp="^127\.0\.1\.1" line="127.0.1.1	{{ common_hostname }}" state=present
+    tags: [common,host]
+
+  - name: Adding sysctl.conf params
+    blockinfile:
+      path: /etc/sysctl.conf
+      marker: "# {mark} ANSIBLE MANAGED BLOCK"
+      block: |
+        net.ipv6.conf.all.disable_ipv6 = 1
+        vm.swappiness = 1
+        vm.vfs_cache_pressure = 1000
+    notify: [reload sysctl]
+    tags: [common,sysctl]
+
+  - name: Installing  python library
+    pip:
+     name: python-consul

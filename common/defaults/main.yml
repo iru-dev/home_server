@@ -1,0 +1,36 @@
+---
+
+common_timezone: 	"Europe/Moscow"
+common_hostname:	"{{ ansible_hostname }}"
+
+common_packages:
+  - tcpdump
+  - htop
+  - iftop
+  - iotop
+  - sysstat
+  - screen
+  - nmap
+  - vim
+  - mc
+  - ethtool
+  - iperf
+  - rsync
+  - pv
+  - bash-completion
+  - strace
+  - sudo
+  - curl
+  - wget
+  - dbus
+  - net-tools
+  - unzip
+  - nano
+  - bind-utils
+  - python-pip
+  - net-tools
+  - telnet
+  - git
+
+common_enable_repo: "epel"
+common_packages_state: present
