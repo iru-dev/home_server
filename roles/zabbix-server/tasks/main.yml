@@ -1,0 +1,96 @@
+---
+- name: Install Zabbix Mysql
+  yum: name={{packages}} state=present
+  vars:
+    packages:
+      - zabbix-server-mysql
+      - zabbix-web-mysql
+      - php-fpm
+
+- name: Zabbix Server config
+  tags: config
+  template:
+    src: zabbix_server.conf.j2
+    dest: /etc/zabbix/zabbix_server.conf
+    owner: root
+    group: zabbix
+    mode: 0640
+
+- name: Zabbix Web config
+  tags: config
+  template:
+    src: zabbix.conf.php.j2
+    dest: /etc/zabbix/web/zabbix.conf.php
+    owner: root
+    group: apache
+    mode: 0640
+
+- name: Create /var/lib/zabbix directory
+  tags: config
+  file:
+    dest: /var/lib/zabbix
+    state: directory
+    owner: zabbix
+    group: zabbix
+    mode: 0770
+
+- name: Zabbix agent .my.cnf
+  tags: config
+  template:
+    src: zabbix.my.cnf.j2
+    dest: /var/lib/zabbix/.my.cnf
+    owner: zabbix
+    group: zabbix
+    mode: 0600
+
+- name: nginx 10-zbx.conf
+  tags: config
+  template:
+    src: 10-zbx.conf.j2
+    dest: /etc/nginx/conf.d/10-zbx.conf
+    owner: root
+    group: root
+    mode: 0644
+
+
+- name: Create nginx ssl dir
+  tags: config
+  file:
+    dest: /etc/nginx/ssl
+    state: directory
+    owner: root
+    group: nginx
+    mode: 0750
+
+#- name: copy nginx ssl
+#  tags: config
+#  copy:
+#    src: ssl/{{item}}
+#    dest: /etc/nginx/ssl/
+#    owner: root
+#    group: nginx
+#    mode: 0640
+#  with_items:
+#    - "{{zabbix_cert}}"
+#    - "{{zabbix_cert_key}}"
+
+- name: copy nginx passwd
+  tags: [config, passwd]
+  copy:
+    src: zbx.htpasswd
+    dest: /etc/nginx/passwd/
+    owner: root
+    group: nginx
+    mode: 0640
+
+- name: Restart zabbix-agent
+  tags: restart
+  service: name=zabbix-agent state=restarted enabled=yes
+
+- name: Restart zabbix-server
+  tags: restart
+  service: name=zabbix-server state=restarted enabled=yes
+
+- name: Restart nginx
+  tags: restart
+  service: name=nginx state=restarted enabled=yes

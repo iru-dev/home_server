@@ -1,0 +1,4 @@
+---
+
+zabbix_cert: zabbix.crt
+zabbix_cert_key: zabbix.key

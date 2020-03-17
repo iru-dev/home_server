@@ -1,0 +1,114 @@
+---
+- name: Install zabbix-agent package
+  tags: upgrade
+  yum: name="zabbix-agent" state=latest update_cache=yes
+
+- name: Install tools
+  yum:
+    name:
+     - pciutils
+     - unzip
+     - wget
+    state: present
+
+- name: Creates externalscripts directory
+  tags: [copy_conf, copy_scripts]
+  file: path=/etc/zabbix/externalscripts state=directory owner=root group=zabbix mode=0750
+
+- name: Creates zabbix_agentd.d directory
+  tags: copy_conf
+  file: path=/etc/zabbix/zabbix_agentd.d state=directory owner=root group=zabbix mode=0750
+
+- name: Creates directory home
+  tags: copy_conf
+  file: path=/var/lib/zabbix state=directory owner=zabbix group=zabbix mode=0700
+
+- name: Make /etc/zabbix/zabbix_agentd.d/userparameter_mysql.conf
+  tags: [copy_conf, mysql]
+  template: >
+    src=userparameter_mysql.conf.j2
+    dest=/etc/zabbix/zabbix_agentd.d/userparameter_mysql.conf
+    owner=root
+    group=root
+    mode=0644
+  notify: restart zabbix-agent
+
+- name: Copy zabbix-agent configuration file
+  tags: [copy_conf, copy_agent_conf]
+  template:
+    src: zabbix_agentd.conf.j2
+    dest: /etc/zabbix/zabbix_agentd.conf
+    owner: root
+    group: zabbix
+    mode: 0644
+  notify: restart zabbix-agent
+
+- name: Copy zabbix PSK file
+  tags: [copy_conf, copy_agent_conf]
+  when: zabbix_psk_key is defined
+  copy:
+    content: "{{ zabbix_psk_key }}"
+    dest: /etc/zabbix/zabbix_agentd.psk
+    owner: root
+    group: zabbix
+    mode: 0640
+  notify: restart zabbix-agent
+
+- name: Copy zabbix_agentd.d/ config files
+  tags: copy_conf
+  copy: src={{ item }} dest="/etc/zabbix/zabbix_agentd.d/"
+  with_fileglob:
+    - files/zabbix_agentd.d/*
+  notify: restart zabbix-agent
+
+- name: Copy externalscripts/ files
+  tags: [copy_conf, copy_scripts]
+  copy: src={{ item }} dest="/etc/zabbix/externalscripts/" owner=root group=zabbix mode=0750
+  with_fileglob:
+    - files/externalscripts/*
+
+- name: Delete default files
+  tags: copy_conf
+  file: path=/etc/zabbix/{{ item }} state=absent
+  with_items:
+    - zabbix_agentd.d/userparameter_mysql.conf.rpmnew
+
+- name: Add zabbix to adm group
+  tags: users
+  user:
+    name: zabbix
+    group: zabbix
+    groups: adm
+
+- name: Check if user exists
+  tags: users
+  shell: /usr/bin/getent group | awk -F":" '{print $1}'
+  register: etc_groups
+
+- name: Add secondary Groups to zabbix
+  tags: users
+  user: name="zabbix" groups="{{item}}" append=yes
+  when: item in etc_groups.stdout_lines
+  notify: restart zabbix-agent
+  with_items:
+    - nginx
+
+- name: Check MEGARAID controller
+  tags: megacli
+  command: bash -c "lspci | grep -i megaraid"
+  ignore_errors: True
+  register: MegaRaid
+
+- { include: megaraid.yml, when: MegaRaid is success }
+
+- name: Check ADAPTEC controller
+  tags: adaptec
+  command: bash -c "lspci | grep -i adaptec"
+  ignore_errors: True
+  register: Adaptec
+
+- { include: adaptec.yml, when: Adaptec is success }
+
+- name: Start zabbix-agent
+  tags: restart
+  service: name=zabbix-agent state=started enabled=yes

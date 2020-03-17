@@ -1,0 +1,35 @@
+# For all the following commands HOME should be set to the directory that has .my.cnf file with password information.
+
+# Flexible parameter to grab global variables. On the frontend side, use keys like mysql.status[Com_insert].
+# Key syntax is mysql.status[variable].
+UserParameter=mysql.status[*],echo "show global status where Variable_name='$1';" | HOME=/var/lib/zabbix mysql -N | awk '{print $$2}'
+UserParameter=mysql.variable[*],echo "show variables like '$1';" | HOME=/var/lib/zabbix mysql -N | awk '{print $$2}'
+
+UserParameter=mysql.global_status,HOME=/var/lib/zabbix mysql -srN -e 'show global status where Variable_name in ("Bytes_sent","Bytes_received","Connections","Slave_running","Com_begin","Com_delete","Com_commit","Com_rollback","Com_select","Com_update","Com_insert");'
+
+# Flexible parameter to determine database or table size. On the frontend side, use keys like mysql.size[zabbix,history,data].
+# Key syntax is mysql.size[<database>,<table>,<type>].
+# Database may be a database name or "all". Default is "all".
+# Table may be a table name or "all". Default is "all".
+# Type may be "data", "index", "free" or "both". Both is a sum of data and index. Default is "both".
+# Database is mandatory if a table is specified. Type may be specified always.
+# Returns value in bytes.
+# 'sum' on data_length or index_length alone needed when we are getting this information for whole database instead of a single table
+UserParameter=mysql.size[*],bash -c 'echo "select sum($(case "$3" in both|"") echo "data_length+index_length";; data|index) echo "$3_length";; free) echo "data_free";; esac)) from information_schema.tables$([[ "$1" = "all" || ! "$1" ]] || echo " where table_schema=\"$1\"")$([[ "$2" = "all" || ! "$2" ]] || echo "and table_name=\"$2\"");" | HOME=/var/lib/zabbix mysql -N'
+
+UserParameter=mysql.ping,HOME=/var/lib/zabbix mysqladmin ping | grep -c alive
+UserParameter=mysql.version,mysql -V
+UserParameter=mysql.admin_status,HOME=/var/lib/zabbix mysqladmin status
+UserParameter=mysql.uptime,HOME=/var/lib/zabbix mysqladmin status | awk '{print $2}'
+UserParameter=mysql.threads,HOME=/var/lib/zabbix mysqladmin status | awk '{print $4}'
+UserParameter=mysql.questions,HOME=/var/lib/zabbix mysqladmin status | awk '{print $6}'
+UserParameter=mysql.slow_queries,HOME=/var/lib/zabbix mysqladmin status | awk '{print $9}'
+UserParameter=mysql.opens,HOME=/var/lib/zabbix mysqladmin status | awk '{print $11}'
+UserParameter=mysql.flush_tables,HOME=/var/lib/zabbix mysqladmin status | awk '{print $14}'
+UserParameter=mysql.open_tables,HOME=/var/lib/zabbix mysqladmin status | awk '{print $17}'
+UserParameter=mysql.queries_per_sec,HOME=/var/lib/zabbix mysqladmin status | awk '{print $22}'
+UserParameter=mysql.slave.Seconds_Behind_Master,HOME=/var/lib/zabbix mysql -e "SHOW SLAVE STATUS \G" | grep "Seconds_Behind_Master" | awk '{print $2}' | sed -r 's;NULL;0;'
+UserParameter=mysql.slave.Last_SQL_Error,HOME=/var/lib/zabbix mysql -e "SHOW SLAVE STATUS \G" | grep "Last_SQL_Error:" | sed 's/\s*Last_SQL_Error: //g'
+UserParameter=mysql.slave.Slave_IO_Running,HOME=/var/lib/zabbix mysql -e "SHOW SLAVE STATUS \G" | grep "Slave_IO_Running" | awk '{print $2}'
+UserParameter=mysql.slave.Replication_Status,HOME=/var/lib/zabbix mysql -srN -e "SELECT GROUP_CONCAT(IF(rasbw.LAST_ERROR_MESSAGE!='',rasbw.LAST_ERROR_MESSAGE,NULL)) FROM performance_schema.replication_applier_status_by_worker rasbw"
+UserParameter=mysql.Replication_Health,HOME=/var/lib/zabbix mysql -srN -e "CALL Zabbix_ReplicaHealthCheck();" bukmaker

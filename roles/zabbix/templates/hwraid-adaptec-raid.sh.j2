@@ -1,0 +1,95 @@
+#!/bin/bash 
+export LC_ALL="" 
+export LANG="en_US.UTF-8" 
+#
+
+PATH="/usr/local/bin:/usr/local/sbin:/sbin:/bin:/usr/sbin:/usr/bin:/opt/bin:/usr/Arcconf"
+
+ARCCONF="sudo $(which arcconf)"
+
+LOCK_DIR="/tmp/adaptec_hwraid_lock" 
+SLOT="{{ adaptec_adapter_number.stdout }}" 
+
+{% raw %}
+#
+if [[ -n "$1" && -n "$2" && -z "$3" ]]; then
+  ##### DISCOVERY #####
+  TYPE="$2" 
+  if [[ "${TYPE}" == "ldiscovery" ]]; then
+    DRIVES=`${ARCCONF} getconfig ${SLOT} ld | awk '/[lL]ogical [dD]evice [nN]umber/ {printf("Logical_%s\n", $4)}' | sed 's/:/./g'`
+    if [[ -n ${DRIVES} ]]; then
+      JSON="{ \"data\":[" 
+      SEP="" 
+      for DRIVE in ${DRIVES}; do
+        JSON=${JSON}"$SEP{\"{#LD}\":\"${DRIVE}\"}" 
+        SEP=", " 
+      done
+      JSON=${JSON}"]}" 
+      echo ${JSON}
+    fi
+    exit 0
+  elif [[ ${TYPE} == "pdiscovery" ]]; then
+    DRIVES=`${ARCCONF} getconfig ${SLOT} pd | egrep -B2 'Device is a [a-zA-Z]* drive' |awk -F# '/Device #/ {printf("Physical_%s\n", $2)}'`
+    if [[ -n ${DRIVES} ]]; then
+      JSON="{ \"data\":[" 
+      SEP="" 
+      for DRIVE in ${DRIVES}; do
+        JSON=${JSON}"$SEP{\"{#PD}\":\"${DRIVE}\"}" 
+        SEP=", " 
+      done
+      JSON=${JSON}"]}" 
+      echo ${JSON}
+    fi
+    exit 0
+  else
+    exit 1
+  fi
+elif [[ -n "$1" && -n "$2" && -n "$3" ]]; then
+  ##### PARAMETERS #####
+  RESERVED="$1" 
+  DRIVE="$2" 
+  METRIC="$3" 
+  CACHE_TTL="50" 
+  CACHE_FILE="/tmp/zabbix.adaptec.cache" 
+  EXEC_TIMEOUT="3" 
+  NOW_TIME=`date '+%s'`
+  ##### RUN #####
+  if [ -s "${CACHE_FILE}" ]; then
+    CACHE_TIME=`stat -c"%Y" "${CACHE_FILE}"`
+  else
+    CACHE_TIME=0
+  fi
+  DELTA_TIME=$((${NOW_TIME} - ${CACHE_TIME}))
+  #
+  if [ ${DELTA_TIME} -lt ${EXEC_TIMEOUT} ]; then
+    sleep $((${EXEC_TIMEOUT} - ${DELTA_TIME}))
+  elif [ ${DELTA_TIME} -gt ${CACHE_TTL} ]; then
+    echo "" >> "${CACHE_FILE}" # !!!
+    DATACACHE=`${ARCCONF} getconfig ${SLOT} ld | grep -e '[dD]evice [nN]umber' -e '[sS]tatus of [lL]ogical [dD]evice' | awk '/[lL]ogical [dD]evice [nN]umber/ {printf("Logical_%s", $4)} /Status of Logical Device/ {printf(" Status:%s\n", $6)}';
+    ${ARCCONF} getconfig ${SLOT} pd | sed '/Device/ s/\(Device\)/\1:/g' | awk -F':' '         
+        function ltrim(s) { sub(/^[ \t]+/, "", s); return s }
+        function rtrim(s) { sub(/[ \t]+$/, "", s); return s }
+        function trim(s)  { return rtrim(ltrim(s)); }
+        /Device: #/       {fd_counter+=1; fd[fd_counter]=trim($2)}
+        /\s\sState/              {status[fd_counter]=trim($2)}
+        /Serial Number/       {serial[fd_counter]=trim($2)}
+         END {                                                    
+          for (i=1; i<=fd_counter; i+=1) {
+            printf ( "Physical_%s Status:%s\n", fd[i], status[i]); #TEMP
+            printf ( "Physical_%s Serial:%s\n", fd[i], serial[i]);
+           }
+        }'| sed 's/#//g' `
+    echo "${DATACACHE}" > "${CACHE_FILE}" # !!!
+    chmod 640 "${CACHE_FILE}" 
+  fi
+  #
+  cat "${CACHE_FILE}" | grep -iw "${DRIVE}" | awk -F':' 'BEGIN{IGNORECASE=1} /'${METRIC}'/ {print $2}' | head -n1
+ # rm ${CACHE_FILE}
+  exit 0
+
+#
+else
+  exit 1
+fi
+{% endraw %}
+EOT

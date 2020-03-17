@@ -1,0 +1,4 @@
+Defaults:zabbix !requiretty
+zabbix ALL=(ALL) NOPASSWD: /etc/zabbix/externalscripts/lsimegaraid.sh
+zabbix ALL=(ALL) NOPASSWD: /opt/MegaRAID/MegaCli/MegaCli64 -LDInfo -LAll -a0 -NoLog
+zabbix ALL=(ALL) NOPASSWD: /opt/MegaRAID/MegaCli/MegaCli64 -PDlist -a0 -NoLog

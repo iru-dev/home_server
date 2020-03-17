@@ -1,6 +1,0 @@
----
-- hosts: backend
-  become: true
-  roles:
-   - common
-#   - nginx

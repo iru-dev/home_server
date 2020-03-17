@@ -1,0 +1,4 @@
+---
+dependencies:
+  - { role: install-repo-epel }
+  - { role: install-repo-zabbix }

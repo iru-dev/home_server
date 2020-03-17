@@ -1,0 +1,81 @@
+---
+- name: Check if Remi repo is already configured.
+  stat: path={{ remi_repofile_path }}
+  register: remi_repofile_result
+
+- when: not remi_repofile_result.stat.exists
+  block:
+    - name: Install remi repo.
+      yum:
+        name: "{{ remi_repo_url }}"
+        state: present
+
+    - name: Import remi GPG key.
+      rpm_key:
+        key: "{{ remi_repo_gpg_key_url }}"
+        state: present
+
+- name: Enable main Remi repo
+  tags: repo
+  ini_file:
+    dest: /etc/yum.repos.d/remi.repo
+    section: remi
+    option: enabled
+    value: "{{ remi_repo_enable }}"
+
+- name: REMI | enable [remi-php56] repo
+  tags: repo
+  ini_file:
+    dest: /etc/yum.repos.d/remi.repo
+    create: no
+    section: "remi-php56"
+    option: enabled
+    value: "{{(remi_php == 5.6)|ternary(1,0)}}"
+
+- name: REMI | enable [remi-php70] repo
+  tags: repo
+  ini_file:
+    dest: /etc/yum.repos.d/remi-php70.repo
+    create: no
+    section: "remi-php70"
+    option: enabled
+    value: "{{(remi_php == 7.0)|ternary(1,0)}}"
+
+- name: REMI | enable [remi-php71] repo
+  tags: repo
+  ini_file:
+    dest: /etc/yum.repos.d/remi-php71.repo
+    create: no
+    section: "remi-php71"
+    option: enabled
+    value: "{{(remi_php == 7.1)|ternary(1,0)}}"
+
+- name: REMI | enable [remi-php74] repo
+  tags: repo
+  ignore_errors: yes
+  ini_file:
+    dest: /etc/yum.repos.d/remi-php74.repo
+    create: no
+    section: "remi-php74"
+    option: enabled
+    value: "{{(remi_php == 7.2)|ternary(1,0)}}"
+
+- name: REMI | enable [remi-php73] repo
+  tags: repo
+  ignore_errors: yes
+  ini_file:
+    dest: /etc/yum.repos.d/remi-php73.repo
+    create: no
+    section: "remi-php73"
+    option: enabled
+    value: "{{(remi_php == 7.3)|ternary(1,0)}}"
+
+- name: REMI | enable [remi-php74] repo
+  tags: repo
+  ignore_errors: yes
+  ini_file:
+    dest: /etc/yum.repos.d/remi-php74.repo
+    create: no
+    section: "remi-php74"
+    option: enabled
+    value: "{{(remi_php == 7.4)|ternary(1,0)}}"

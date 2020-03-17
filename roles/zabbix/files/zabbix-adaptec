@@ -1,0 +1,3 @@
+Defaults:zabbix !requiretty
+zabbix ALL=(ALL) NOPASSWD: /etc/zabbix/externalscripts/hwraid-adaptec-raid.sh
+zabbix ALL=(ALL) NOPASSWD: /usr/Arcconf/arcconf getconfig *

@@ -1,0 +1,25 @@
+---
+
+- name: Check MEGACLI installed
+  tags: megacli
+  command: bash -c "rpm -qa | grep -i megacli"
+  ignore_errors: True
+  register: MEGACLI
+
+- name: install MEGACLI
+  tags: megacli
+  shell: wget https://docs.broadcom.com/docs-and-downloads/raid-controllers/raid-controllers-common-files/8-07-14_MegaCLI.zip -O /tmp/MEGACLI.zip --unlink --quiet  && unzip -Coa /tmp/MEGACLI.zip Linux/MegaCli-8.07.14-1.noarch.rpm -d /tmp/ && rpm -i /tmp/Linux/MegaCli-8.07.14-1.noarch.rpm
+  when: MEGACLI is failed
+
+- name: check adapter for MEGACLI
+  tags: megacli
+  shell: /opt/MegaRAID/MegaCli/MegaCli64 -LDInfo -Lall -Aall | grep -i Adapter | awk '{print $2}'
+  register: megacli_adapter_number
+
+- name: Update sudoers
+  tags: megacli
+  copy: src='zabbix-megacli' dest='/etc/sudoers.d/zavvix-megacli' owner=root mode=0400
+
+- name: Copy zabbix-agent LSIMEGA RAID scripts
+  tags: megacli
+  template: src=lsimegaraid.j2 dest="/etc/zabbix/externalscripts/lsimegaraid.sh" owner=root group=zabbix mode=0750

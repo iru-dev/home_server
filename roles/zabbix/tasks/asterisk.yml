@@ -1,0 +1,30 @@
+---
+- name: Install Git
+  tags: asterisk
+  yum: name="git" state=present
+
+- name: install asterisk-zabbix-py
+  tags: asterisk
+  git: repo=https://bitbucket.org/SimakinK/asterisk-zabbix.git dest=/etc/zabbix/externalscripts/asterisk-zabbix-py clone=yes force=yes
+
+- name: add symlinks to conf
+  tags: asterisk
+  file: src=/etc/zabbix/externalscripts/asterisk-zabbix-py/userparameter_asterisk.conf dest=/etc/zabbix/zabbix_agentd.d/userparameter_asterisk.conf state=link 
+
+- name: install pip
+  tags: asterisk
+  yum:
+    name:
+      - python-pip
+      - python-devel
+      - gcc
+    state: latest
+
+- name: install pip dependecy
+  tags: asterisk
+  pip:
+    name:
+      - argparse
+      - pexpect
+      - posix-ipc
+      - wsgiref

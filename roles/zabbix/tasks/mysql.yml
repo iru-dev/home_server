@@ -1,0 +1,28 @@
+- name: Install dependensies for ansible mysql
+  yum:
+    name:
+      - MySQL-python
+    state: installed
+
+- name: Mysql autoregistration
+  set_fact:
+    auto_registration: "{{ mysql_auto_registration }}"
+#  when: mysql_master is defined or mysql_slave is defined
+
+- name: Create mysql user for zabbix
+  mysql_user:
+    name: "{{ mysql_zabbix_user }}"
+    host: "localhost"
+    password: "{{ mysql_zabbix_password }}"
+    priv: "*.*:REPLICATION CLIENT/performance_schema.*:SELECT"
+    state: present
+  when: not mysql_master is defined #Только на мастерах
+
+- name: Make /var/lib/zabbix/.my.cnf
+  template: >
+    src=.my.cnf.j2
+    dest=/var/lib/zabbix/.my.cnf
+    owner=zabbix
+    group=zabbix
+    mode=0644
+#  when: not mysql_master is defined #Только на мастерах

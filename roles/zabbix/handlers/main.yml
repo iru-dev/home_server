@@ -1,0 +1,5 @@
+  - name: restart zabbix-agent
+    tags: [copy_conf, copy_agent_conf, users]
+    service:
+      name: zabbix-agent
+      state: restarted

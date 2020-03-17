@@ -1,0 +1,24 @@
+---
+- name: Check ADAPTEC installed
+  tags: adaptec
+  command: bash -c "rpm -q Arcconf"
+  ignore_errors: True
+  register: Adaptec_cli
+
+- name: install ADAPTEC
+  tags: adaptec
+  shell: wget http://download.adaptec.com/raid/storage_manager/arcconf_v2_05_22932.zip -O /tmp/adaptec.zip --unlink --quiet &&  unzip -Coa /tmp/adaptec.zip linux_x64/rpm/Arcconf-2.05-22932.x86_64.rpm -d /tmp/  && rpm -i /tmp/linux_x64/rpm/Arcconf-2.05-22932.x86_64.rpm
+  when: Adaptec_cli is failed
+
+- name: check adapter for ADAPTEC
+  tags: adaptec
+  shell: "/usr/Arcconf/arcconf | grep -i found | awk -F': ' '{print $2}'"
+  register: adaptec_adapter_number
+
+- name: Update sudoers
+  tags: adaptec
+  copy: src='zabbix-adaptec' dest='/etc/sudoers.d/zabbix-adaptec' owner=root mode=0400
+
+- name: Copy zabbix-agent LSIMEGA RAID scripts
+  tags: adaptec
+  template: src=hwraid-adaptec-raid.sh.j2 dest="/etc/zabbix/externalscripts/hwraid-adaptec-raid.sh" owner=root group=zabbix mode=0750
