@@ -1,10 +1,11 @@
 ---
-#- name: Remove old zabbix repo config RPM
-#  yum: name="zabbix-release" state=absent
+- debug:
+    msg:
+    - 'https://repo.zabbix.com/zabbix/4.4/rhel/{{ ansible_distribution_major_version if ansible_distribution_major_version != "NA" else "7"}}/x86_64/zabbix-release-4.4-1.el{{ ansible_distribution_major_version if ansible_distribution_major_version != "NA" else "7"}}.noarch.rpm'
 
 - name: Install zabbix repo config RPM
   tags: repo
-  yum: name="https://repo.zabbix.com/zabbix/4.4/rhel/{{ ansible_distribution_major_version if ansible_distribution_major_version != "NA" else "7"}}/x86_64/zabbix-release-4.4-1.el{{ ansible_distribution_major_version if ansible_distribution_major_version != "NA" else "7"}}.noarch.rpm"
+  yum: name='https://repo.zabbix.com/zabbix/4.4/rhel/{{ ansible_distribution_major_version if ansible_distribution_major_version != "NA" else "7"}}/x86_64/zabbix-release-4.4-1.el{{ ansible_distribution_major_version if ansible_distribution_major_version != "NA" else "7"}}.noarch.rpm'
 
 - name: Add gpg key from repo.zabbix.com
   tags: repo

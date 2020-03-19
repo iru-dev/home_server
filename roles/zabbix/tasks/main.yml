@@ -1,7 +1,8 @@
 ---
 - name: Install zabbix-agent package
   tags: upgrade
-  yum: name="zabbix-agent" state=latest update_cache=yes
+  yum: name="zabbix-agent" state=present
+  #update_cache=yes
 
 - name: Install tools
   yum:

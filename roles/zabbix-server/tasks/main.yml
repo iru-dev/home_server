@@ -5,7 +5,6 @@
     packages:
       - zabbix-server-mysql
       - zabbix-web-mysql
-      - php-fpm
 
 - name: Zabbix Server config
   tags: config

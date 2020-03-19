@@ -2,3 +2,5 @@
 
 zabbix_cert: zabbix.crt
 zabbix_cert_key: zabbix.key
+zabbix_int_servers: "10.10.88.3"
+zabbix_ext_servers: ""
